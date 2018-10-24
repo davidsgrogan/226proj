@@ -41,3 +41,5 @@ PitchingPost %>% group_by(playerID) %>% summarise(number_years = n()) %>% nrow
 
 # Batters is 4247
 BattingPost %>% group_by(playerID) %>% summarise(number_years = n()) %>%nrow
+
+aug_pitch = inner_join(PitchingPost, Pitching, by=c("playerID", "yearID"))
