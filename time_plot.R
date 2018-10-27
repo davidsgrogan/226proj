@@ -27,3 +27,16 @@ ggplot(Ks, mapping = aes(x = yearID, y = KsPerAB)) +
 # regular season OPS, which is maybe preferable. But even then I'm interested
 # in getting more data by dropping or imputing columns that are NA close to
 # 1955.
+
+# About the issue of high correlation, perhaps we could rate stats, like BA,
+# OBP etc. This should decrease the correlation at least some, even though the
+# rate stats will also be correlated, but hopefully less so. But then we have
+# the issue of a guy who played two games and hit .750. This shouldn't be that
+# common, because he probably wouldn't get many postseason playing time.  But
+# if we wanted to take care of it, we could add the bounds of a confidence
+# interval instead of the real rate stat. A guy who played 150 games and hit
+# .300 would have like .293 and .305 but a guy who played 5 games and hit .300
+# would have .050 and .400, e.g. Confidence intervals aside, I don't know if
+# adding f(X1, X2, X5) is "kosher" or would have some bad side effect. In any
+# case, I think we could drop G completely, it adds little above PA, though it
+# would identify guys who mostly PH. Maybe we add PA/G.
