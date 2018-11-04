@@ -1,0 +1,67 @@
+---
+output:
+  html_notebook: default
+---
+
+```{r}
+library(baseballDBR)
+library(Lahman)
+library(tidyverse)
+library(GGally)
+```
+
+```{r}
+#BattingPost <- filter(Lahman::BattingPost, playerID=="ripkeca01" | playerID=="anderbr01")
+
+selected_postseason <- select(BattingPost, -c(round, teamID, lgID))
+grouped_postseason <- group_by(selected_postseason, yearID, playerID)
+summarized_postseason <- summarize_all(grouped_postseason, sum)
+nrow(summarized_postseason)
+```
+There are `r nrow(summarized_postseason)` player-year rows in postseason after collapsing a player's multiple postseason series into 1 row.
+
+Now let's see how prevalent NA is in the postseason.
+
+```{r}
+nrow(summarized_postseason %>% na.omit())
+```
+So we only lose 201 rows if we throw out all the rows with na. But we could be biasing if certain types of players have NAs when other players don't.
+
+```{r}
+summarise_all(summarized_postseason, funs(mean(is.na(.))))
+```
+
+Only 1884 -> 1892 have NAs, which are for CS, HBP, SH, SF, GIDP. 1903 and forward are complete. Which is same as na.omit() above.
+
+```{r}
+summarized_postseason <- na.omit(summarized_postseason)
+```
+
+Now to figure out regular season.
+
+```{r}
+nrow(Batting)
+```
+
+How are traded players represented? Willie Mays was traded once midseason.
+```{r}
+mays <- filter(Lahman::Batting, playerID=="mayswi01", yearID > 1970)
+mays
+```
+
+The player is only going to play in the postseason for his last team/league (right?), so let's
+only keep last stint, throw out the rest.
+
+```{r}
+group_by(mays, playerID, yearID) %>% filter(stint == max(stint))
+```
+
+# Sat pm: apply that to the whole Batting table then ensure there is only one row per player-year.
+
+# Then do the mean(is.na) thing for Batting.
+
+# Also go back to postseason, add OPS and see how much we lose to NA. (Should be none!)
+
+```{r}
+#aug_bat_no_na = as_tibble(inner_join(Batting, BattingPost, by=c("playerID", "yearID")) %>% na.omit())
+```
