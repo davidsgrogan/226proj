@@ -56,11 +56,25 @@ only keep last stint, throw out the rest.
 group_by(mays, playerID, yearID) %>% filter(stint == max(stint))
 ```
 
-# Sat pm: apply that to the whole Batting table then ensure there is only one row per player-year.
+Now apply that to the whole Batting table and ensure there is only one row per player-year.
+```{r}
+Batting <- group_by(Lahman::Batting, playerID, yearID)
+nrow(Batting)
+only_last_stint <- Batting %>% filter(stint == max(stint))
+nrow(only_last_stint)
+Batting_with_rows <- summarize(Batting, rows = n())
+nrow(Batting_with_rows)
+# They both equal 95250, so this works.
+```
 
-# Then do the mean(is.na) thing for Batting.
+```{r}
+# It's IBB that we don't have data for. Which is unfortunate. SF and CS probably don't matter that much, but IBB could be interesting.
+last_stint_grouped_by_year <- ungroup(only_last_stint) %>% group_by(yearID)
+summarise_all(last_stint_grouped_by_year, funs(sum(is.na(.))))
+```
 
-# Also go back to postseason, add OPS and see how much we lose to NA. (Should be none!)
+# Go back to postseason, add OPS and see how much we lose to NA. (Should be none!)
+# Do the join finally, see how many rows we have if we filter by > 1954, when we have everything, and also by > 1938, when we lose GIDP, then >1912 when we'd lose SO.
 
 ```{r}
 #aug_bat_no_na = as_tibble(inner_join(Batting, BattingPost, by=c("playerID", "yearID")) %>% na.omit())
