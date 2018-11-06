@@ -10,7 +10,12 @@ library(tidyverse)
 library(GGally)
 ```
 
+### Cleaning and augmenting Postseason
+
+First, players who appeared in multiple postseason rounds in a year have a row for each round. Which isn't what we want. So we have to sum the counts from the multiple rounds.
+
 ```{r}
+# BattingPost <- Lahman::BattingPost
 #BattingPost <- filter(Lahman::BattingPost, playerID=="ripkeca01" | playerID=="anderbr01")
 
 selected_postseason <- select(BattingPost, -c(round, teamID, lgID))
@@ -18,26 +23,50 @@ grouped_postseason <- group_by(selected_postseason, yearID, playerID)
 summarized_postseason <- summarize_all(grouped_postseason, sum)
 nrow(summarized_postseason)
 ```
-There are `r nrow(summarized_postseason)` player-year rows in postseason after collapsing a player's multiple postseason series into 1 row.
+There are 9479 player-year rows in postseason after collapsing a player's multiple postseason series into 1 row.
 
 Now let's see how prevalent NA is in the postseason.
 
-```{r}
+```{r drop_all_nas, warning=TRUE}
 nrow(summarized_postseason %>% na.omit())
 ```
-So we only lose 201 rows if we throw out all the rows with na. But we could be biasing if certain types of players have NAs when other players don't.
+We lose 201 rows if we throw out all the rows with na. But dropping all na's could leave us with a biased dataset if certain types of players have NAs when others don't, so instead let's look at when the na's stop:
 
 ```{r}
 summarise_all(summarized_postseason, funs(mean(is.na(.))))
 ```
 
-Only 1884 -> 1892 have NAs, which are for CS, HBP, SH, SF, GIDP. 1903 and forward are complete. Which is same as na.omit() above.
+Only 1884 -> 1892 have NAs, which are for CS, HBP, SH, SF, GIDP. 1903 and forward are complete.
 
 ```{r}
-summarized_postseason <- na.omit(summarized_postseason)
+postseason_complete_rows <- filter(summarized_postseason, yearID > 1902)
+nrow(postseason_complete_rows)
 ```
 
-Now to figure out regular season.
+This is the same number as just dropping all the na's, from the code chunk named drop_all_nas above, which means there are 0 years when some players have na's but others don't.
+
+```{r}
+nrow(postseason_complete_rows)
+summarized_postseason_no_na <- na.omit(postseason_complete_rows)
+nrow(summarized_postseason_no_na)
+```
+
+If those two numbers don't match then the earlier 1903 filtering isn't appropriate.
+
+```{r}
+summarized_postseason_no_na_at_least_1_AB <- filter(summarized_postseason_no_na, AB > 0)
+nrow(summarized_postseason_no_na_at_least_1_AB)
+summarized_postseason_no_na$OPS <- OPS(summarized_postseason_no_na)
+nrow(na.omit(summarized_postseason_no_na))
+```
+
+If those two numbers match then the only reason players have NA after adding OPS is because they had 0 AB.
+
+So we have 6736 postseason rows from 1903 forward. This is on the low side considering our regular season stats aren't complete anywhere close to 1903.
+
+TODO: Add more columns to postseason and ensure numbers still match.
+
+### Cleaning regular season
 
 ```{r}
 nrow(Batting)
@@ -49,31 +78,32 @@ mays <- filter(Lahman::Batting, playerID=="mayswi01", yearID > 1970)
 mays
 ```
 
-The player is only going to play in the postseason for his last team/league (right?), so let's
-only keep last stint, throw out the rest.
+The player is only going to play in the postseason for his last team/league (right?), so let's only keep last stint, throw out the rest.
 
 ```{r}
 group_by(mays, playerID, yearID) %>% filter(stint == max(stint))
 ```
 
-Now apply that to the whole Batting table and ensure there is only one row per player-year.
+Ok, that code works for Willie Mays. Now apply it to the whole Batting table and ensure there is only one row per player-year.
 ```{r}
 Batting <- group_by(Lahman::Batting, playerID, yearID)
 nrow(Batting)
 only_last_stint <- Batting %>% filter(stint == max(stint))
-nrow(only_last_stint)
 Batting_with_rows <- summarize(Batting, rows = n())
+nrow(only_last_stint)
 nrow(Batting_with_rows)
-# They both equal 95250, so this works.
 ```
 
+If last two numbers equal, then we're all good so far. And looks like 102816 - 95250 =~ 7500 players played for multiple teams in one season.
+
+
 ```{r}
-# It's IBB that we don't have data for. Which is unfortunate. SF and CS probably don't matter that much, but IBB could be interesting.
 last_stint_grouped_by_year <- ungroup(only_last_stint) %>% group_by(yearID)
 summarise_all(last_stint_grouped_by_year, funs(sum(is.na(.))))
 ```
 
-# Go back to postseason, add OPS and see how much we lose to NA. (Should be none!)
+So it's IBB that we don't have data for. Which is unfortunate. SF and CS probably don't matter that much, but I suspect IBB is a fairly unique and informative signal.
+
 # Do the join finally, see how many rows we have if we filter by > 1954, when we have everything, and also by > 1938, when we lose GIDP, then >1912 when we'd lose SO.
 
 ```{r}
