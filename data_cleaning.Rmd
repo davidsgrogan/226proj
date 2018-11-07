@@ -51,20 +51,25 @@ summarized_postseason_no_na <- na.omit(postseason_complete_rows)
 nrow(summarized_postseason_no_na)
 ```
 
-If those two numbers don't match then the earlier 1903 filtering isn't appropriate.
+If those two numbers don't match then the earlier 1903 filtering isn't good enough.
 
 ```{r}
 summarized_postseason_no_na_at_least_1_AB <- filter(summarized_postseason_no_na, AB > 0)
 nrow(summarized_postseason_no_na_at_least_1_AB)
 summarized_postseason_no_na$OPS <- OPS(summarized_postseason_no_na)
-nrow(na.omit(summarized_postseason_no_na))
+summarized_postseason_no_na <- na.omit(summarized_postseason_no_na)
+nrow(summarized_postseason_no_na)
 ```
 
 If those two numbers match then the only reason players have NA after adding OPS is because they had 0 AB.
 
 So we have 6736 postseason rows from 1903 forward. This is on the low side considering our regular season stats aren't complete anywhere close to 1903.
 
-TODO: Add more columns to postseason and ensure numbers still match.
+
+```{r}
+summarized_postseason_no_na$RC2002 <- RC2002(summarized_postseason_no_na)
+nrow(na.omit(summarized_postseason_no_na))
+```
 
 ### Cleaning regular season
 
@@ -104,8 +109,9 @@ summarise_all(last_stint_grouped_by_year, funs(sum(is.na(.))))
 
 So it's IBB that we don't have data for. Which is unfortunate. SF and CS probably don't matter that much, but I suspect IBB is a fairly unique and informative signal.
 
-# Do the join finally, see how many rows we have if we filter by > 1954, when we have everything, and also by > 1938, when we lose GIDP, then >1912 when we'd lose SO.
-
 ```{r}
-#aug_bat_no_na = as_tibble(inner_join(Batting, BattingPost, by=c("playerID", "yearID")) %>% na.omit())
+nrow(inner_join(only_last_stint %>% filter(yearID > 1954), summarized_postseason_no_na, by=c("playerID", "yearID")))
+nrow(inner_join(only_last_stint %>% filter(yearID > 1938), summarized_postseason_no_na, by=c("playerID", "yearID")))
+nrow(inner_join(only_last_stint %>% filter(yearID > 1912), summarized_postseason_no_na, by=c("playerID", "yearID")))
 ```
+We still have 5109 rows if we cut off at 1954. If we drop GIDP before 1939 we have 5666, if we drop GIDP before 1913, we have 6480.
